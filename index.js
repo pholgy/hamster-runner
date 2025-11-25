@@ -26,7 +26,7 @@
         }, 500);
     });
 
-    // Smart Bot AI - Uses proven formula: distance < 20 * speed
+    // Smart Bot AI
     function botDecision(runner) {
         if (!botMode || !runner || !runner.playing || runner.crashed) return;
         if (!runner.tRex || !runner.horizon || !runner.horizon.obstacles) return;
@@ -40,32 +40,33 @@
         if (!obstacle) return;
 
         var speed = runner.currentSpeed;
-        var jumpDistance = 20 * speed + (obstacle.width / 2);
+        // Distance from hamster to obstacle
+        var hamsterRight = tRex.xPos + tRex.config.WIDTH;
+        var distance = obstacle.xPos - hamsterRight;
 
-        // Check if obstacle is close enough to react
-        if (obstacle.xPos < jumpDistance && obstacle.xPos > 0) {
-            // yPos > 75 means ground obstacle (cactus) or low pterodactyl - JUMP
-            // yPos <= 75 means high flying pterodactyl - DUCK
+        // Jump earlier at higher speeds - the magic formula
+        var safeDistance = 25 * speed + obstacle.width;
+
+        if (distance < safeDistance && distance > -obstacle.width) {
             if (obstacle.yPos > 75) {
-                // Ground obstacle or low flyer - JUMP
+                // Ground cactus or low pterodactyl - JUMP!
                 if (!tRex.jumping) {
                     tRex.startJump(speed);
                 }
             } else {
-                // High flying pterodactyl - DUCK
+                // High pterodactyl - DUCK!
                 if (!tRex.ducking) {
                     tRex.setDuck(true);
                 }
             }
         } else {
-            // Release duck when safe
             if (tRex.ducking) {
                 tRex.setDuck(false);
             }
         }
     }
 
-    // Run bot check every 5ms for faster reactions
+    // Run bot check every 5ms for fast reactions
     setInterval(function() {
         var runner = Runner.instance_;
         if (runner) botDecision(runner);
