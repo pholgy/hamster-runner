@@ -4,6 +4,84 @@
 // extract from chromium source code by @liuwayong
 (function () {
     'use strict';
+
+    // Bot Mode Configuration
+    var botMode = false;
+
+    // Toggle bot mode function (called from HTML button)
+    window.toggleMode = function() {
+        botMode = !botMode;
+        var btn = document.getElementById('modeBtn');
+        if (botMode) {
+            btn.innerHTML = '🤖 BOT MODE: ON';
+            btn.style.background = '#4CAF50';
+            // Auto-start the game if not playing
+            var runner = Runner.instance_;
+            if (runner && !runner.playing && !runner.crashed) {
+                runner.loadSounds();
+                runner.playing = true;
+                runner.update();
+            }
+            // Restart if crashed
+            if (runner && runner.crashed) {
+                runner.restart();
+            }
+        } else {
+            btn.innerHTML = '🤖 BOT MODE: OFF';
+            btn.style.background = '#333';
+        }
+    };
+
+    // Bot AI - Decides when to jump or duck
+    function botDecision(runner) {
+        if (!botMode || !runner || !runner.playing || runner.crashed) return;
+
+        var tRex = runner.tRex;
+        var obstacles = runner.horizon.obstacles;
+
+        if (obstacles.length === 0) return;
+
+        var obstacle = obstacles[0];
+        var obstacleX = obstacle.xPos;
+        var tRexX = tRex.xPos;
+        var distance = obstacleX - tRexX;
+
+        // Calculate reaction distance based on current speed
+        // Higher speed = need to react earlier
+        var reactionDistance = 80 + (runner.currentSpeed * 15);
+
+        // Check if obstacle is close enough to react
+        if (distance > 0 && distance < reactionDistance) {
+            var obstacleHeight = obstacle.typeConfig.height;
+            var obstacleY = obstacle.yPos;
+
+            // Pterodactyl (flying obstacle) - check if it's low enough to duck
+            if (obstacle.typeConfig.type === 'PTERODACTYL') {
+                // If pterodactyl is flying low, duck; otherwise jump
+                if (obstacleY > 50) {
+                    // Low pterodactyl - duck
+                    if (!tRex.ducking && !tRex.jumping) {
+                        tRex.setDuck(true);
+                    }
+                } else {
+                    // High pterodactyl - jump
+                    if (!tRex.jumping && !tRex.ducking) {
+                        tRex.startJump(runner.currentSpeed);
+                    }
+                }
+            } else {
+                // Cactus - always jump
+                if (!tRex.jumping && !tRex.ducking) {
+                    tRex.startJump(runner.currentSpeed);
+                }
+            }
+        } else {
+            // Release duck when obstacle passed or far away
+            if (tRex.ducking && (distance < 0 || distance > reactionDistance + 50)) {
+                tRex.setDuck(false);
+            }
+        }
+    }
     /**
      * T-Rex runner.
      * @param {string} outerContainerId Outer containing element id.
@@ -538,6 +616,9 @@
             if (this.playing) {
                 this.clearCanvas();
 
+                // Bot AI makes decisions
+                botDecision(this);
+
                 if (this.tRex.jumping) {
                     this.tRex.updateJump(deltaTime);
                 }
@@ -804,6 +885,14 @@
 
             // Reset the time clock.
             this.time = getTimeStamp();
+
+            // Auto-restart if bot mode is on
+            if (botMode) {
+                var self = this;
+                setTimeout(function() {
+                    self.restart();
+                }, 300);
+            }
         },
 
         stop: function () {
