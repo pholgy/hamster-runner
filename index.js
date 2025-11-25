@@ -26,7 +26,7 @@
         }, 500);
     });
 
-    // Bot AI - Decides when to jump or duck
+    // Smart Bot AI - Uses proven formula: distance < 20 * speed
     function botDecision(runner) {
         if (!botMode || !runner || !runner.playing || runner.crashed) return;
         if (!runner.tRex || !runner.horizon || !runner.horizon.obstacles) return;
@@ -39,39 +39,37 @@
         var obstacle = obstacles[0];
         if (!obstacle) return;
 
-        var distance = obstacle.xPos - tRex.xPos;
-
-        // React earlier at higher speeds
-        var reactionDistance = 100 + (runner.currentSpeed * 18);
+        var speed = runner.currentSpeed;
+        var jumpDistance = 20 * speed + (obstacle.width / 2);
 
         // Check if obstacle is close enough to react
-        if (distance > 0 && distance < reactionDistance) {
-            // Pterodactyl - duck if low, jump if high
-            if (obstacle.typeConfig && obstacle.typeConfig.type === 'PTERODACTYL') {
-                if (obstacle.yPos > 75) {
-                    // Low flying - duck
-                    if (!tRex.ducking && !tRex.jumping) {
-                        tRex.setDuck(true);
-                    }
-                } else {
-                    // High flying - jump
-                    if (!tRex.jumping) {
-                        tRex.startJump(runner.currentSpeed);
-                    }
+        if (obstacle.xPos < jumpDistance && obstacle.xPos > 0) {
+            // yPos > 75 means ground obstacle (cactus) or low pterodactyl - JUMP
+            // yPos <= 75 means high flying pterodactyl - DUCK
+            if (obstacle.yPos > 75) {
+                // Ground obstacle or low flyer - JUMP
+                if (!tRex.jumping) {
+                    tRex.startJump(speed);
                 }
             } else {
-                // Cactus - jump
-                if (!tRex.jumping) {
-                    tRex.startJump(runner.currentSpeed);
+                // High flying pterodactyl - DUCK
+                if (!tRex.ducking) {
+                    tRex.setDuck(true);
                 }
             }
-        } else if (distance < 0 || distance > reactionDistance) {
-            // Release duck after obstacle passes
+        } else {
+            // Release duck when safe
             if (tRex.ducking) {
                 tRex.setDuck(false);
             }
         }
     }
+
+    // Run bot check every 5ms for faster reactions
+    setInterval(function() {
+        var runner = Runner.instance_;
+        if (runner) botDecision(runner);
+    }, 5);
     /**
      * T-Rex runner.
      * @param {string} outerContainerId Outer containing element id.
@@ -605,9 +603,6 @@
 
             if (this.playing) {
                 this.clearCanvas();
-
-                // Bot AI makes decisions
-                botDecision(this);
 
                 if (this.tRex.jumping) {
                     this.tRex.updateJump(deltaTime);
