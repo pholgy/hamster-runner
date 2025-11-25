@@ -29,6 +29,7 @@
     // Bot AI - Decides when to jump or duck
     function botDecision(runner) {
         if (!botMode || !runner || !runner.playing || runner.crashed) return;
+        if (!runner.tRex || !runner.horizon || !runner.horizon.obstacles) return;
 
         var tRex = runner.tRex;
         var obstacles = runner.horizon.obstacles;
@@ -36,42 +37,37 @@
         if (obstacles.length === 0) return;
 
         var obstacle = obstacles[0];
-        var obstacleX = obstacle.xPos;
-        var tRexX = tRex.xPos;
-        var distance = obstacleX - tRexX;
+        if (!obstacle) return;
 
-        // Calculate reaction distance based on current speed
-        // Higher speed = need to react earlier
-        var reactionDistance = 80 + (runner.currentSpeed * 15);
+        var distance = obstacle.xPos - tRex.xPos;
+
+        // React earlier at higher speeds
+        var reactionDistance = 100 + (runner.currentSpeed * 18);
 
         // Check if obstacle is close enough to react
         if (distance > 0 && distance < reactionDistance) {
-            var obstacleHeight = obstacle.typeConfig.height;
-            var obstacleY = obstacle.yPos;
-
-            // Pterodactyl (flying obstacle) - check if it's low enough to duck
-            if (obstacle.typeConfig.type === 'PTERODACTYL') {
-                // If pterodactyl is flying low, duck; otherwise jump
-                if (obstacleY > 50) {
-                    // Low pterodactyl - duck
+            // Pterodactyl - duck if low, jump if high
+            if (obstacle.typeConfig && obstacle.typeConfig.type === 'PTERODACTYL') {
+                if (obstacle.yPos > 75) {
+                    // Low flying - duck
                     if (!tRex.ducking && !tRex.jumping) {
                         tRex.setDuck(true);
                     }
                 } else {
-                    // High pterodactyl - jump
-                    if (!tRex.jumping && !tRex.ducking) {
+                    // High flying - jump
+                    if (!tRex.jumping) {
                         tRex.startJump(runner.currentSpeed);
                     }
                 }
             } else {
-                // Cactus - always jump
-                if (!tRex.jumping && !tRex.ducking) {
+                // Cactus - jump
+                if (!tRex.jumping) {
                     tRex.startJump(runner.currentSpeed);
                 }
             }
-        } else {
-            // Release duck when obstacle passed or far away
-            if (tRex.ducking && (distance < 0 || distance > reactionDistance + 50)) {
+        } else if (distance < 0 || distance > reactionDistance) {
+            // Release duck after obstacle passes
+            if (tRex.ducking) {
                 tRex.setDuck(false);
             }
         }
