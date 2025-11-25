@@ -5,32 +5,20 @@
 (function () {
     'use strict';
 
-    // Bot Mode Configuration
-    var botMode = false;
+    // Bot Mode - Always ON
+    var botMode = true;
 
-    // Toggle bot mode function (called from HTML button)
-    window.toggleMode = function() {
-        botMode = !botMode;
-        var btn = document.getElementById('modeBtn');
-        if (botMode) {
-            btn.innerHTML = '🤖 BOT MODE: ON';
-            btn.style.background = '#4CAF50';
-            // Auto-start the game if not playing
+    // Auto-start the game when loaded
+    window.addEventListener('load', function() {
+        setTimeout(function() {
             var runner = Runner.instance_;
-            if (runner && !runner.playing && !runner.crashed) {
+            if (runner && !runner.playing) {
                 runner.loadSounds();
                 runner.playing = true;
                 runner.update();
             }
-            // Restart if crashed
-            if (runner && runner.crashed) {
-                runner.restart();
-            }
-        } else {
-            btn.innerHTML = '🤖 BOT MODE: OFF';
-            btn.style.background = '#333';
-        }
-    };
+        }, 500);
+    });
 
     // Bot AI - Decides when to jump or duck
     function botDecision(runner) {
