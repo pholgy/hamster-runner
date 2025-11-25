@@ -12,10 +12,16 @@
     window.addEventListener('load', function() {
         setTimeout(function() {
             var runner = Runner.instance_;
-            if (runner && !runner.playing) {
+            if (runner) {
+                // Hide the message box
+                var msgBox = document.getElementById('messageBox');
+                if (msgBox) msgBox.style.visibility = 'hidden';
+
+                // Start the game with a jump
                 runner.loadSounds();
                 runner.playing = true;
                 runner.update();
+                runner.tRex.startJump(runner.currentSpeed);
             }
         }, 500);
     });
